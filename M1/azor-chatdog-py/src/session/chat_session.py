@@ -5,6 +5,7 @@ from files import session_files
 from files.wal import append_to_wal
 from llm.gemini_client import GeminiLLMClient
 from llm.llama_client import LlamaClient
+from llm.anthropic_client import AnthropicLLMClient
 from assistant import Assistant
 from cli import console
 
@@ -14,6 +15,7 @@ from cli import console
 ENGINE_MAPPING = {
     'LLAMA_CPP': LlamaClient,
     'GEMINI': GeminiLLMClient,
+    'ANTHROPIC': AnthropicLLMClient,  # Assuming AnthropiLLMClient is defined elsewhere
 }
 
 
@@ -45,24 +47,30 @@ class ChatSession:
         Creates or recreates the LLM chat session with current history.
         This should be called after any history modification.
         """
-        # Walidacja zmiennej ENGINE
         engine = os.getenv('ENGINE', 'GEMINI').upper()
         if engine not in ENGINE_MAPPING:
             valid_engines = ', '.join(ENGINE_MAPPING.keys())
             raise ValueError(f"ENGINE musi być jedną z wartości: {valid_engines}, otrzymano: {engine}")
-        
+
         # Initialize LLM client if not already created
         if self._llm_client is None:
             SelectedClientClass = ENGINE_MAPPING.get(engine, GeminiLLMClient)
             console.print_info(SelectedClientClass.preparing_for_use_message())
             self._llm_client = SelectedClientClass.from_environment()
             console.print_info(self._llm_client.ready_for_use_message())
-        
-        self._llm_chat_session = self._llm_client.create_chat_session(
-            system_instruction=self.assistant.system_prompt,
-            history=self._history,
-            thinking_budget=0
-        )
+
+        # Only Gemini supports thinking_budget
+        if engine == 'GEMINI':
+            self._llm_chat_session = self._llm_client.create_chat_session(
+                system_instruction=self.assistant.system_prompt,
+                history=self._history,
+                thinking_budget=0
+            )
+        else:
+            self._llm_chat_session = self._llm_client.create_chat_session(
+                system_instruction=self.assistant.system_prompt,
+                history=self._history
+            )
     
     
     @classmethod
