@@ -1,14 +1,21 @@
 from google import genai
+import tiktoken
 from google.genai import types
-import os 
+import os
+import mlflow
 
 from dotenv import load_dotenv
 load_dotenv()
 
 # if set, print first 4 chars and last 4 chars and dots inside, else print NOT SET
-print(f"env var \"GEMINI_API_KEY\" is: { os.getenv('GEMINI_API_KEY', '')[:4] + '...' + os.getenv('GEMINI_API_KEY', '')[-4:] if len(os.getenv('GEMINI_API_KEY', '')) > 0 else 'NOT SET' }")
+print(f"env var \"GEMINI_API_KEY\" is:{ os.getenv('GEMINI_API_KEY', '')[:4] + '...' + os.getenv('GEMINI_API_KEY', '')[-4:] if len(os.getenv('GEMINI_API_KEY', '')) > 0 else 'NOT SET' }")
 if not os.getenv('GEMINI_API_KEY'):
     raise ValueError("GEMINI_API_KEY environment variable is not set. Please set it to your Google Gemini API key.")
+
+mlflow.gemini.autolog()
+mlflow.set_tracking_uri("http://localhost:5000")
+mlflow.set_experiment("Gemini")
+
 
 client = genai.Client()
 
@@ -42,3 +49,10 @@ response = client.models.generate_content(
 )
 
 print(response.text)
+
+# Get the trace object just created
+trace = mlflow.get_trace(mlflow.get_last_active_trace_id())
+
+enc = tiktoken.get_encoding("o200k_base")
+tokens = enc.encode(response.text)
+print(tokens)
