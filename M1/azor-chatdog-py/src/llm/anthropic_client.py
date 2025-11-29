@@ -16,12 +16,15 @@ class AnthropicChatSessionWrapper:
     Wrapper for Anthropic chat session that provides universal dictionary-based history format.
     Ensures compatibility with Gemini/LlamaClient's history format.
     """
-    def __init__(self, anthropic_client, model_name, system_instruction, history=None):
+    def __init__(self, anthropic_client, model_name, system_instruction, temperature, top_p, top_k, history=None):
         self.anthropic_client = anthropic_client
         self.model_name = model_name
         self.system_instruction = system_instruction
         self.history = history or []
         self.messages = []
+        self.temperature = temperature
+        self.top_p = top_p
+        self.top_k = top_k
 
     def send_message(self, text: str) -> Any:
         # Build message history for Anthropic
@@ -41,19 +44,38 @@ class AnthropicChatSessionWrapper:
             model=self.model_name,
             system=self.system_instruction,
             messages=messages,
-            max_tokens=1024
+            max_tokens=1024,
+            temperature=self.temperature,
+            # top_p=self.top_p, # Cannot be used when temperature is set
+            top_k=self.top_k
         )
         self.messages.append(response)
         return AnthropicResponse(response)
 
     def get_history(self) -> List[Dict]:
-        # Convert Anthropic messages to universal format
+        # Convert Anthropic messages to universal format, ensuring JSON serializability
         universal_history = []
         for msg in self.messages:
             if hasattr(msg, 'role') and hasattr(msg, 'content'):
+                # msg.content may be a list of TextBlock objects or a string
+                if isinstance(msg.content, list) and len(msg.content) > 0:
+                    # If it's a list, extract text from each block
+                    parts = []
+                    for part in msg.content:
+                        if isinstance(part, dict):
+                            text = part.get('text', str(part))
+                        elif hasattr(part, 'text'):
+                            text = part.text
+                        else:
+                            text = str(part)
+                        parts.append({"text": text})
+                else:
+                    # If it's a string or other type
+                    text = msg.content if isinstance(msg.content, str) else str(msg.content)
+                    parts = [{"text": text}]
                 universal_history.append({
                     "role": "model" if msg.role == "assistant" else "user",
-                    "parts": [{"text": msg.content}]
+                    "parts": parts
                 })
         return universal_history
 
@@ -89,14 +111,24 @@ class AnthropicLLMClient:
             console.print_error(f"Błąd inicjalizacji klienta Anthropic: {e}")
             sys.exit(1)
 
-    def create_chat_session(self, system_instruction: str, history: Optional[List[Dict]] = None) -> AnthropicChatSessionWrapper:
+    def create_chat_session(
+                self,
+                system_instruction: str,
+                history: Optional[List[Dict]] = None,
+                temperature: float = 1.0,
+                top_p: float = 1.0,
+                top_k: int = 40
+            ) -> AnthropicChatSessionWrapper:
         if not self._client:
             raise RuntimeError("LLM client not initialized")
         return AnthropicChatSessionWrapper(
             anthropic_client=self._client,
             model_name=self.model_name,
             system_instruction=system_instruction,
-            history=history
+            history=history,
+            temperature=temperature,
+            top_p=top_p,
+            top_k=top_k
         )
 
     def count_history_tokens(self, history: List[Dict]) -> int:
@@ -108,7 +140,14 @@ class AnthropicLLMClient:
             total_chars = 0
             for entry in history:
                 if isinstance(entry, dict) and 'parts' in entry:
-                    text = entry['parts'][0].get('text', '') if entry['parts'] else ''
+                    part = entry['parts'][0] if entry['parts'] else ''
+                    # Handle dicts and TextBlock objects
+                    if isinstance(part, dict):
+                        text = part.get('text', '')
+                    elif hasattr(part, 'text'):
+                        text = part.text
+                    else:
+                        text = str(part)
                     total_chars += len(text)
             return total_chars // 4
         except Exception as e:

@@ -140,10 +140,15 @@ class GeminiLLMClient:
             console.print_error(f"Błąd inicjalizacji klienta Gemini: {e}")
             sys.exit(1)
     
-    def create_chat_session(self, 
-                          system_instruction: str, 
-                          history: Optional[List[Dict]] = None,
-                          thinking_budget: int = 0) -> GeminiChatSessionWrapper:
+    def create_chat_session(
+        self,
+        system_instruction: str, 
+        history: Optional[List[Dict]] = None,
+        thinking_budget: int = 0,
+        temperature: float = 1.0, # Reportedly Gemini default
+        top_p: float = 1.0,      # Reportedly Gemini default
+        top_k: int = 40,        # Reportedly Gemini default
+        ) -> GeminiChatSessionWrapper:
         """
         Creates a new chat session with the specified configuration.
         
@@ -176,7 +181,10 @@ class GeminiLLMClient:
             history=gemini_history,
             config=types.GenerateContentConfig(
                 system_instruction=system_instruction,
-                thinking_config=types.ThinkingConfig(thinking_budget=thinking_budget)
+                thinking_config=types.ThinkingConfig(thinking_budget=thinking_budget),
+                temperature=temperature,
+                top_p=top_p,
+                top_k=top_k
             )
         )
         

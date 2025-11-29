@@ -15,9 +15,13 @@ from cli import console
 ENGINE_MAPPING = {
     'LLAMA_CPP': LlamaClient,
     'GEMINI': GeminiLLMClient,
-    'ANTHROPIC': AnthropicLLMClient,  # Assuming AnthropiLLMClient is defined elsewhere
+    'ANTHROPIC': AnthropicLLMClient,
 }
 
+
+temperature = 1
+top_p = 1.0
+top_k = 40
 
 class ChatSession:
     """
@@ -37,7 +41,7 @@ class ChatSession:
         self.assistant = assistant
         self.session_id = session_id or str(uuid.uuid4())
         self._history = history or []
-        self._llm_client: Union[GeminiLLMClient, LlamaClient, None] = None
+        self._llm_client: Union[GeminiLLMClient, LlamaClient, AnthropicLLMClient, None] = None
         self._llm_chat_session = None
         self._max_context_tokens = 32768
         self._initialize_llm_session()
@@ -52,6 +56,8 @@ class ChatSession:
             valid_engines = ', '.join(ENGINE_MAPPING.keys())
             raise ValueError(f"ENGINE musi być jedną z wartości: {valid_engines}, otrzymano: {engine}")
 
+
+        console.print_help(f"🤖 Inicjalizacja sesji czatu z użyciem parametrów: temperatura={temperature}, top_p={top_p}, top_k={top_k}")
         # Initialize LLM client if not already created
         if self._llm_client is None:
             SelectedClientClass = ENGINE_MAPPING.get(engine, GeminiLLMClient)
@@ -64,12 +70,18 @@ class ChatSession:
             self._llm_chat_session = self._llm_client.create_chat_session(
                 system_instruction=self.assistant.system_prompt,
                 history=self._history,
-                thinking_budget=0
+                thinking_budget=0,
+                temperature=temperature,
+                top_p=top_p,
+                top_k=top_k
             )
         else:
             self._llm_chat_session = self._llm_client.create_chat_session(
                 system_instruction=self.assistant.system_prompt,
-                history=self._history
+                history=self._history,
+                temperature=temperature,
+                top_p=top_p,
+                top_k=top_k
             )
     
     
