@@ -219,10 +219,15 @@ class LlamaClient:
             console.print_error(f"Błąd inicjalizacji modelu LLaMA: {e}")
             raise RuntimeError(f"Failed to initialize LLaMA model: {e}")
     
-    def create_chat_session(self, 
-                          system_instruction: str, 
-                          history: Optional[List[Dict]] = None,
-                          thinking_budget: int = 0) -> LlamaChatSession:
+    def create_chat_session(
+            self, 
+            system_instruction: str, 
+            history: Optional[List[Dict]] = None,
+            thinking_budget: int = 0,
+            temperature: float = 1.0,
+            top_p: float = 1.0,
+            top_k: int = 40
+            ) -> LlamaChatSession:
         """
         Creates a new chat session with the specified configuration.
         
