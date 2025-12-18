@@ -52,6 +52,14 @@ def print_help(message: str):
     """
     print(Fore.YELLOW + message + Style.RESET_ALL)
 
+def print_debug(message: str):
+    """Print a debug message in magenta color.
+    
+    Args:
+        message: The debug message to display
+    """
+    print(Fore.MAGENTA + message + Style.RESET_ALL)
+
 
 def display_help(session_id: str):
     """Displays a short help message."""
