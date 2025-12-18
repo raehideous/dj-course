@@ -19,9 +19,23 @@ ENGINE_MAPPING = {
 }
 
 
-temperature = 1
-top_p = 1.0
-top_k = 40
+# Configurable parameters with environment variable support
+
+def _env_float(name: str, default: float) -> float:
+    try:
+        return float(os.getenv(name, default))
+    except (TypeError, ValueError):
+        return default
+
+def _env_int(name: str, default: int) -> int:
+    try:
+        return int(os.getenv(name, default))
+    except (TypeError, ValueError):
+        return default
+
+temperature = _env_float("MODEL_TEMPERATURE", 1.0)
+top_p = _env_float("MODEL_TOP_P", 1.0)
+top_k = _env_int("MODEL_TOP_K", 40)
 
 class ChatSession:
     """
@@ -57,7 +71,7 @@ class ChatSession:
             raise ValueError(f"ENGINE musi być jedną z wartości: {valid_engines}, otrzymano: {engine}")
 
 
-        console.print_help(f"🤖 Inicjalizacja sesji czatu z użyciem parametrów: temperatura={temperature}, top_p={top_p}, top_k={top_k}")
+        console.print_debug(f"🤖 Inicjalizacja sesji czatu z użyciem parametrów: temperatura={temperature}, top_p={top_p}, top_k={top_k}")
         # Initialize LLM client if not already created
         if self._llm_client is None:
             SelectedClientClass = ENGINE_MAPPING.get(engine, GeminiLLMClient)
@@ -154,9 +168,8 @@ class ChatSession:
         )
         
         if not success and error:
-            # We don't want to fail the entire message sending because of WAL issues
-            # Just log the error to stderr or similar - but for now we'll silently continue
-            pass
+            import logging
+            logging.error(f"WAL append failed for session {self.session_id}: {error}")
         
         return response
     
