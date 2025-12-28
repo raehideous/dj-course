@@ -71,7 +71,8 @@ _commands_completer = NestedCompleter({
     '/quit': None,
     '/help': None,
     '/switch': None,
-    '/session': WordCompleter(SESSION_SUBCOMMANDS, ignore_case=False)
+    '/session': WordCompleter(SESSION_SUBCOMMANDS, ignore_case=False),
+    '/audio': None,
 })
 
 
