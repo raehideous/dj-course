@@ -21,7 +21,7 @@ SAMPLE_LONGER_FILES = [
 ]
 
 # 1. General Configuration
-MODEL_NAME = "openai/whisper-tiny"
+MODEL_NAME = "openai/whisper-small"
 
 def transcribe_audio(audio_path: str, model_name: str) -> str:
     """

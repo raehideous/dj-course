@@ -13,6 +13,17 @@ FILE_PATH = os.path.join(os.path.dirname(__file__), "sample-agent.wav")
 OUTPUT_WAV_PATHS = "output.wav"
 AUDIO_DIR = os.path.join(LOG_DIR, 'output_audio')
 
+_tts_instance = None
+_tts_lock = threading.Lock()
+
+def get_tts_instance():
+    global _tts_instance
+    if _tts_instance is None:
+        with _tts_lock:
+            if _tts_instance is None:
+                _tts_instance = TTS("tts_models/multilingual/multi-dataset/xtts_v2").to("cpu")
+    return _tts_instance
+
 def speak(parts: list, session_id: str, language: str = "pl", speaker_wav: str = FILE_PATH) -> str:
     """
     Accepts a list of message parts (each a dict with 'text' key) and reads them aloud using TTS.
@@ -29,7 +40,7 @@ def speak(parts: list, session_id: str, language: str = "pl", speaker_wav: str =
         return ""
 
     try:
-        tts = TTS("tts_models/multilingual/multi-dataset/xtts_v2").to("cpu")
+        tts = get_tts_instance()
     except Exception as e:
         console.print_error(f"TTS model load failed: {e}")
         return ""
